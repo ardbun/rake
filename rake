@@ -127,7 +127,8 @@ local function addObj(v)
  if not recAddr or tempObj[recAddr] then return end
  local off = entry.offY or 0
  local name=newText{Text=entry.Text,Color=entry.Color,Outline=true,Center=true,Size=14,Font=FONT,Visible=false}
- tempObj[recAddr]=true; tList[#tList+1]={object=object,model=modelRec or object.Parent,name=name,Address=recAddr,offY=off}
+ tempObj[recAddr]=true
+ tList[#tList+1]={object=object,model=modelRec or object.Parent,name=name,Address=recAddr,offY=off}
 end
 
 local function updObj()
@@ -140,8 +141,26 @@ end
 
 local function updPos()
  if not toggle.esp then for _,v in ipairs(tList) do v.name.Visible=false end rakeRoofTitle.Visible=false; rakeRoofValue.Visible=false; return end
- for i=#tList,1,-1 do local v=tList[i]; local o=v.object if not o or not o.Parent then v.name:Remove(); tempObj[v.Address]=nil; tList[i]=tList[#tList]; tList[#tList]=nil else local p=o.Position; local s,on=WorldToScreen(p) if on then local y=v.offY or 0 v.name.Position=Vector2.new(s.X,s.Y-12+y); v.name.Visible=true else v.name.Visible=false end end end
-
+ for i=#tList,1,-1 do 
+  local v=tList[i]
+  local o=v.object
+  if not o or not o.Parent then 
+   v.name:Remove()
+   tempObj[v.Address]=nil
+   tList[i]=tList[#tList]
+   tList[#tList]=nil
+  else 
+   local p=o.Position
+   local s,on=WorldToScreen(p)
+   if on then 
+    local y=v.offY or 0
+    v.name.Position=Vector2.new(s.X, s.Y - 12 + y)
+    v.name.Visible=true
+   else 
+    v.name.Visible=false 
+   end 
+  end 
+ end
  if rakeRoofModel and rakeRoofHealth then
    local part=rakeRoofModel:FindFirstChildWhichIsA("BasePart",true)
    if part then local s,on=WorldToScreen(part.Position) if on then rakeRoofTitle.Position=Vector2.new(s.X, s.Y - 15); rakeRoofValue.Position=Vector2.new(s.X, s.Y - 3); rakeRoofTitle.Visible=toggle.esp; rakeRoofValue.Visible=toggle.esp else rakeRoofTitle.Visible=false; rakeRoofValue.Visible=false end else rakeRoofTitle.Visible=false; rakeRoofValue.Visible=false end
