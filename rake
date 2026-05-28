@@ -1,7 +1,7 @@
-
 local Players,ReplicatedStorage=game:GetService("Players"),game:GetService("ReplicatedStorage")
 local lp=Players.LocalPlayer; local vs="1.3 [02/22]"
 local workspace,Drawing,WorldToScreen,ipairs,pairs,task=workspace,Drawing,WorldToScreen,ipairs,pairs,task
+local iskeypressed = iskeypressed or function() return false end
 local toggle={esp=true,hud=true}; local keyHeld={f1=false,f2=false}
 local function newText(p)local t=Drawing.new("Text"); for k,v in pairs(p) do t[k]=v end; return t end
 local FONT=Drawing.Fonts.System
@@ -218,13 +218,13 @@ task.spawn(function()
  while true do
   if cam.ViewportSize~=last then last=cam.ViewportSize; updHudPos() end
   local t=TimerValue.Value; timerText.Text=fmt(t); timerText.Color=t<=15 and Color3.fromHex("#c44b4b") or Color3.fromHex("#ffffff")
-  if StationPower and StationPower.Value==false then ppmsText.Text="Blackout"; ppmsText.Color=Color3.fromHex("#dac6ac") else ppmsText.Text=string.format("%.2f",PPMS.Value); ppmsText.Color=Color3.fromHex("#ffffff") end
+  if StationPower and not StationPower.Value then ppmsText.Text="Blackout"; ppmsText.Color=Color3.fromHex("#dac6ac") else ppmsText.Text=string.format("%.2f",PPMS.Value); ppmsText.Color=Color3.fromHex("#ffffff") end
   timerLabel.Position=timerText.Position+Vector2.new(0,18); ppmsLabel.Position=ppmsText.Position+Vector2.new(0,18)
   task.wait(0.1)
  end
 end)
 
-spawn(function()
+task.spawn(function()
  while true do
   for i=1,7 do
     local f=RadioChannel:FindFirstChild("Line"..i)
@@ -246,7 +246,9 @@ spawn(function()
   local count=0
   for i,entry in ipairs(modList) do local p=nil if entry then p=Players:FindFirstChild(entry) end if p then count=count+1; modLines[i].Text=p.Name; modLines[i].Visible=toggle.hud else modLines[i].Visible=false end end
   modLabel.Visible=toggle.hud and count>0; upStaffPos()
-  local h=TargetVal and TargetVal.Value if h and h:IsA("Part") then local c=getCharacterFromPart(h); targetPlayerText.Text=c and c.Name or "Unknown" else targetPlayerText.Text="None" end
+  local ok2, h = pcall(function() return TargetVal and TargetVal.Value end)
+h = ok2 and h or nil
+if h and pcall(function() return h:IsA("Part") end) and h:IsA("Part") then local c=getCharacterFromPart(h); targetPlayerText.Text=c and c.Name or "Unknown" else targetPlayerText.Text="None" end
   scrapText.Visible=toggle.hud; scrapLabel.Visible=toggle.hud
   task.wait(0.5)
  end
