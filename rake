@@ -341,12 +341,30 @@ local function addObj(v)
                         local children = itemsFolderNew:GetChildren()
                         for i = 1, #children do
                             if not existing.itemTexts[i] then
-                                existing.itemTexts[i] = newText({ Text = crateItemDisplayNames[children[i].Name] or children[i].Name, Color = crateItemColor, Outline = false, Center = true, Size = 13, Font = FONT, Visible = false })
+                                local child = children[i]
+                                local displayName = crateItemDisplayNames[child.Name] or child.Name or "unknown"
+                                existing.itemTexts[i] = newText({ 
+                                    Text = displayName,
+                                    Color = crateItemColors[child.Name] or crateItemColor, 
+                                    Outline = false, 
+                                    Center = true, 
+                                    Size = 13, 
+                                    Font = FONT, 
+                                    Visible = false 
+                                })
                             end
                         end
                         for i = #children + 1, 6 do
                             if not existing.itemTexts[i] then
-                                existing.itemTexts[i] = newText({ Text = "", Color = crateItemColor, Outline = false, Center = true, Size = 13, Font = FONT, Visible = false })
+                                existing.itemTexts[i] = newText({ 
+                                    Text = "", 
+                                    Color = crateItemColor, 
+                                    Outline = false, 
+                                    Center = true, 
+                                    Size = 13, 
+                                    Font = FONT, 
+                                    Visible = false 
+                                })
                             end
                         end
                     end
@@ -357,12 +375,31 @@ local function addObj(v)
         return
     end
     local off = entry.offY or 0
-    local name = newText({ Text = entry.Text, Color = entry.Color, Outline = true, Center = true, Size = 13, Font = FONT, Visible = false })
-    local dist = newText({ Text = "0m", Color = Color3.fromHex("#c9c9c9"), Outline = true, Center = true, Size = 13, Font = FONT, Visible = false })
+    local name = newText({ 
+        Text = entry.Text or "?", 
+        Color = entry.Color or Color3.fromHex("#ffffff"), 
+        Outline = true, 
+        Center = true, 
+        Size = 13, 
+        Font = FONT, 
+        Visible = false 
+    })
+    local dist = newText({ 
+        Text = "0m", 
+        Color = Color3.fromHex("#c9c9c9"), 
+        Outline = true, 
+        Center = true, 
+        Size = 13, 
+        Font = FONT, 
+        Visible = false 
+    })
     local itemBG, itemTexts, itemsFolder = nil, nil, nil
+    
     if entryName == "Box" or entryName == "SupplyCrate" or (modelRec and modelRec.Name == "Box") then
         local boxModel = modelRec
-        if boxModel and boxModel.Name ~= "Box" then boxModel = boxModel:FindFirstChild("Box") end
+        if boxModel and boxModel.Name ~= "Box" then 
+            boxModel = boxModel:FindFirstChild("Box") 
+        end
         if boxModel then
             itemsFolder = boxModel:FindFirstChild("Items_Folder")
             if itemsFolder then
@@ -371,10 +408,27 @@ local function addObj(v)
                 local children = itemsFolder:GetChildren()
                 for i = 1, #children do
                     local child = children[i]
-                    itemTexts[#itemTexts + 1] = newText({ Text = crateItemDisplayNames[child.Name] or child.Name, Color = crateItemColor, Outline = true, Center = true, Size = 13, Font = FONT, Visible = false })
+                    local displayName = crateItemDisplayNames[child.Name] or child.Name or "unknown"
+                    itemTexts[#itemTexts + 1] = newText({ 
+                        Text = displayName,
+                        Color = crateItemColors[child.Name] or crateItemColor, 
+                        Outline = true, 
+                        Center = true, 
+                        Size = 13, 
+                        Font = FONT, 
+                        Visible = false 
+                    })
                 end
                 for i = #children + 1, 6 do
-                    itemTexts[#itemTexts + 1] = newText({ Text = "", Color = crateItemColor, Outline = true, Center = true, Size = 13, Font = FONT, Visible = false })
+                    itemTexts[i] = newText({ 
+                        Text = "", 
+                        Color = crateItemColor, 
+                        Outline = true, 
+                        Center = true, 
+                        Size = 13, 
+                        Font = FONT, 
+                        Visible = false 
+                    })
                 end
             end
         end
