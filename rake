@@ -158,14 +158,14 @@ local espObj = {
     StationMSG = { Type = "BasePart", Text = "electricity", Color = Color3.fromHex("#6ba5ff") },
     ShopMSG = { Type = "BasePart", Text = "shop", Color = Color3.fromHex("#6ba5ff") },
     ObservationTowerMSG = { Type = "BasePart", Text = "tower", Color = Color3.fromHex("#6ba5ff") },
-    Scrap1 = { Type = "Model", Root = "Scrap", Text = "scrap_1", Color = Color3.fromHex("#a79266") },
-    Scrap2 = { Type = "Model", Root = "Scrap", Text = "scrap_2", Color = Color3.fromHex("#c9aa68") },
-    Scrap3 = { Type = "Model", Root = "Scrap", Text = "scrap_3", Color = Color3.fromHex("#dfb65d") },
-    Scrap4 = { Type = "Model", Root = "Scrap", Text = "scrap_4", Color = Color3.fromHex("#ecca30") },
-    Scrap5 = { Type = "Model", Root = "Scrap", Text = "scrap_5", Color = Color3.fromHex("#ffd000") },
-    RakeTrapModel = { Type = "Model", Root = "RakeTrap", Text = "trap", Color = Color3.fromHex("#ffc6c6") },
-    Box = { Type = "Model", Root = "BoxHitBox", Text = "supply", Color = Color3.fromHex("#e4c3ff") },
-    SupplyCrate = { Type = "Model", Root = "CrateHitBox", Text = "supply", Color = Color3.fromHex("#e4c3ff") },
+    Scrap1 = { Type = "Model", Root = "Scrap", Text = "scrap 1", Color = Color3.fromHex("#a79266") },
+    Scrap2 = { Type = "Model", Root = "Scrap", Text = "scrap 2", Color = Color3.fromHex("#c9aa68") },
+    Scrap3 = { Type = "Model", Root = "Scrap", Text = "scrap 3", Color = Color3.fromHex("#dfb65d") },
+    Scrap4 = { Type = "Model", Root = "Scrap", Text = "scrap 4", Color = Color3.fromHex("#ecca30") },
+    Scrap5 = { Type = "Model", Root = "Scrap", Text = "scrap 5", Color = Color3.fromHex("#ffd000") },
+    RakeTrapModel = { Type = "Model", Root = "HitBox", Text = "trap", Color = Color3.fromHex("#ffc6c6") },
+    Box = { Type = "Model", Root = "HitBox", Text = "crate", Color = Color3.fromHex("#e4c3ff") },
+    SupplyCrate = { Type = "Model", Root = "HitBox", Text = "crate", Color = Color3.fromHex("#e4c3ff") },
 }
 
 local function fmt(s)
@@ -282,12 +282,20 @@ local function addObj(v)
     local addr = (model and safeAddress(model)) or safeAddress(v)
     if addr and tempObj[addr] then return end
     local entry, object, modelRec, entryName = nil, nil, model, nil
-    if model and espObj[model.Name] then
+    
+    if model and model.Name == "RakeTrapModel" then
+        entry = { Type = "Model", Text = "trap", Color = Color3.fromHex("#ffc6c6") }
+        entryName = "RakeTrapModel"
+        object = model:FindFirstChild("HitBox", true)
+    end
+    
+    if not entry and model and espObj[model.Name] then
         local e = espObj[model.Name]
         if not e.ExactName or model.Name == "FlareGunPickUp" then
             entry = e; entryName = model.Name
         end
     end
+    
     if not entry and model then
         local scrapIdx = tostring(model.Name):match("^Scrap(%d+)")
         if scrapIdx then
@@ -295,6 +303,7 @@ local function addObj(v)
             if espObj[key] then entry = espObj[key]; entryName = key end
         end
     end
+    
     if not entry then
         for name, e in pairs(espObj) do
             if e.Root then
@@ -308,14 +317,13 @@ local function addObj(v)
             end
         end
     end
+    
     if not entry then return end
     if model and model.Name == "SupplyCrate" and not model:FindFirstChild(entry.Root, true) then
         local inner = model:FindFirstChild("Box")
         if inner and inner:IsA("Model") then modelRec = inner end
     end
-    object = object
-        or (entry.Type == "BasePart" and v:IsA("BasePart") and v)
-        or (modelRec and modelRec:FindFirstChild(entry.Root, true))
+    object = object or (entry.Type == "BasePart" and v:IsA("BasePart") and v) or (modelRec and modelRec:FindFirstChild(entry.Root, true))
     if not object then return end
     local recAddr = safeAddress(modelRec or object)
     if not recAddr then return end
