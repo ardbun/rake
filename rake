@@ -153,7 +153,7 @@ end
 
 local espObj = {
     FlareGunPickUp = { Type = "Model", Root = "FlareGun", Text = "flare", Color = Color3.fromHex("#ff6b6b"), ExactName = true },
-    BaseCampMSG = { Type = "BasePart", Text = "base", Color = Color3.fromHex("#6ba5ff"), offY = 25 },
+    BaseCampMSG = { Type = "BasePart", Text = "base camp", Color = Color3.fromHex("#6ba5ff"), offY = 25 },
     SafehouseMSG = { Type = "BasePart", Text = "house", Color = Color3.fromHex("#6ba5ff"), offY = 25 },
     StationMSG = { Type = "BasePart", Text = "electricity", Color = Color3.fromHex("#6ba5ff") },
     ShopMSG = { Type = "BasePart", Text = "shop", Color = Color3.fromHex("#6ba5ff") },
