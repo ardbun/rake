@@ -121,7 +121,7 @@ local crateBgOpacity = 0.3
 local crateBgPadX = 28
 local crateBgPadY = 10
 local crateBgStaticWidth = (crateColSpacing * 2) + (crateBgPadX * 2)
-local crateShowDistance = 10
+local crateShowDistance = 25
 
 local crateItemDisplayNames = {
     FirstAidKit = "medkit",
