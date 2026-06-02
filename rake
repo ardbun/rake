@@ -279,6 +279,12 @@ end
 local function addObj(v)
     if not v then return end
     local model = getModelFromInstance(v)
+    if model and model.Name == "Box" then
+        local taken = model:FindFirstChild("Taken")
+        if taken and taken.Value == true then
+            return
+        end
+    end
     local addr = (model and safeAddress(model)) or safeAddress(v)
     if addr and tempObj[addr] then return end
     local entry, object, modelRec, entryName = nil, nil, model, nil
