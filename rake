@@ -163,6 +163,7 @@ local espObj = {
     Scrap3 = { Type = "Model", Root = "Scrap", Text = "scrap_3", Color = Color3.fromHex("#dfb65d") },
     Scrap4 = { Type = "Model", Root = "Scrap", Text = "scrap_4", Color = Color3.fromHex("#ecca30") },
     Scrap5 = { Type = "Model", Root = "Scrap", Text = "scrap_5", Color = Color3.fromHex("#ffd000") },
+    RakeTrapModel = { Type = "Model", Root = "HitBox", Text = "trap", Color = Color3.fromHex("#ffc6c6") },
     Box = { Type = "Model", Root = "HitBox", Text = "supply", Color = Color3.fromHex("#e4c3ff") },
     SupplyCrate = { Type = "Model", Root = "HitBox", Text = "supply", Color = Color3.fromHex("#e4c3ff") },
 }
