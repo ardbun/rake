@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local lp = Players.LocalPlayer
 local vs = "2.0 [05/17]"
 local Drawing = Drawing
@@ -12,6 +13,7 @@ local toggle = { esp = true, hud = true }
 local keyHeld = { f1 = false, f2 = false, f3 = false, f4 = false }
 local FONT = Drawing.Fonts.UI
 
+-- ===== DRAWING HELPERS =====
 local function newText(props)
     local ok, o = pcall(function() return Drawing.new("Text") end)
     if not ok or not o then return nil end
@@ -26,6 +28,7 @@ local function T(p)
     return newText(p)
 end
 
+-- ===== REPLICATED STORAGE REFERENCES =====
 local TimerValue = ReplicatedStorage:WaitForChild("Timer")
 local pwrValue = ReplicatedStorage:WaitForChild("PowerValues")
 local PPMS = pwrValue:WaitForChild("PPMS")
@@ -40,11 +43,13 @@ local pSM = {
 
 local cam = workspace.CurrentCamera
 
+-- ===== HUD POSITION HELPERS =====
 local function anc()
     local v = cam.ViewportSize
     return Vector2.new(v.X / 2, v.Y - 80), Vector2.new(70, v.Y - 240), Vector2.new(v.X - 200, v.Y - 100)
 end
 
+-- ===== HUD ELEMENTS =====
 local timerText = T({ Center = true, Size = 22, Color = Color3.fromHex("#ffffff"), Text = "0:00", Visible = true })
 local scrapText = T({ Center = true, Size = 22, Color = Color3.fromHex("#ffffff"), Text = "0", Visible = true })
 local timerLabel = T({ Center = true, Size = 22, Color = Color3.fromHex("#ffffff"), Text = "timer", Visible = true })
@@ -62,6 +67,7 @@ local rakeRoofModel, rakeRoofHealth, rakeRoofConn = nil, nil, nil
 
 local hudObjects = { timerText, scrapText, timerLabel, scrapLabel }
 
+-- ===== POWER / STAFF POSITION =====
 local function upPwrPos()
     local _, _, r = anc()
     pwrLabel.Position = r - Vector2.new(50, 0)
@@ -74,13 +80,57 @@ local function upPwrPos()
     end
 end
 
+-- ===== STAFF DETECTION (Sushi Gambit Style) =====
+local GroupId = 2930838
+local MinRank = 10  -- Moderator and above
+
+local function GetRankInGroup(UserId, GroupId)
+    if not UserId then return 0, "Unknown" end
+    local url = "https://groups.roblox.com/v2/users/" .. UserId .. "/groups/roles"
+    local success, response = pcall(game.HttpGet, game, url)
+    if not success then return 0, "Unknown" end
+    
+    local data = game:GetService("HttpService"):JSONDecode(response)
+    for _, group in pairs(data.data) do
+        if group.group.id == GroupId then
+            return group.role.rank, group.role.name
+        end
+    end
+    return 0, "Unknown"
+end
+
+local KnownStaff = {}
+local Connections = {}  -- For cleanup
+
+local function CheckStaff(player)
+    task.spawn(function()
+        local userId = player.UserId
+        if not userId then return end
+        local rank, roleName = GetRankInGroup(userId, GroupId)
+        if rank >= MinRank and not KnownStaff[userId] then
+            KnownStaff[userId] = true
+            notify(player.Name .. " (" .. roleName .. ") joined!", "STAFF ALERT", 8)
+            print("[STAFF] " .. player.Name .. " | " .. roleName .. " (Rank " .. rank .. ")")
+        end
+    end)
+end
+
+pcall(function()
+    if Players and Players.PlayerAdded then
+        for _, player in pairs(game.Players:GetPlayers()) do
+            CheckStaff(player)
+        end
+        table.insert(Connections, Players.PlayerAdded:Connect(CheckStaff))
+    end
+end)
+
+notify("Staff Detector", "Loaded | Group ID: " .. GroupId, 4)
+print("[STAFF] Staff detector loaded | Group: " .. GroupId .. " | Min Rank: " .. MinRank)
+
+-- ===== STAFF POSITION (HUD) =====
 local modLH = 18
-local modList = { "Aitareis", "Mr68Moth", "ZZZXIIIXZZZ", "TZZV", "RlFLEM4N", "FelixVenue", "DeliverCreations", "z_papermoon", "r3shape", "ARRYvvv" }
 local modLabel = T({ Center = false, Size = 13, Color = Color3.fromHex("#ff97f6"), Text = "staff_detected", Visible = false })
 local modLines = {}
-for i = 1, #modList do
-    modLines[i] = T({ Center = false, Size = 13, Color = Color3.fromHex("#ffffff"), Text = "", Visible = false })
-end
 
 local function upStaffPos()
     local _, _, r = anc()
@@ -88,12 +138,49 @@ local function upStaffPos()
     local off = 0
     for i = 1, #modLines do
         local line = modLines[i]
-        if line.Visible then
+        if line and line.Visible then
             off = off + 1
             line.Position = modLabel.Position - Vector2.new(0, off * modLH)
         end
     end
 end
+
+local function CheckAllStaff()
+    -- Build staff list from KnownStaff
+    local staffNames = {}
+    for id, data in pairs(KnownStaff) do
+        if Players:FindFirstChild(data.Name) then
+            table.insert(staffNames, data.Name)
+        end
+    end
+    
+    -- Update modLines to match staff count
+    for i = 1, #modLines do
+        if modLines[i] then
+            modLines[i].Visible = false
+            modLines[i].Text = ""
+        end
+    end
+    
+    for i, name in ipairs(staffNames) do
+        if not modLines[i] then
+            modLines[i] = T({ Center = false, Size = 13, Color = Color3.fromHex("#ffffff"), Text = "", Visible = false })
+        end
+        modLines[i].Text = name
+        modLines[i].Visible = toggle.hud
+    end
+    
+    modLabel.Visible = toggle.hud and #staffNames > 0
+    upStaffPos()
+end
+
+-- Update staff HUD periodically
+task.spawn(function()
+    while true do
+        task.wait(5)
+        CheckAllStaff()
+    end
+end)
 
 local function updHudPos()
     local c, l = anc()
@@ -109,6 +196,7 @@ updHudPos()
 upPwrPos()
 upStaffPos()
 
+-- ===== ESP SYSTEM =====
 local tList = {}
 local tempObj = {}
 
@@ -151,6 +239,7 @@ local function newBg()
     return b
 end
 
+-- ===== ESP OBJECT CONFIG =====
 local espObj = {
     FlareGunPickUp = { Type = "Model", Root = "FlareGun", Text = "flare", Color = Color3.fromHex("#ff6b6b"), ExactName = true },
     BaseCampMSG = { Type = "BasePart", Text = "base camp", Color = Color3.fromHex("#6ba5ff"), offY = 25 },
@@ -199,6 +288,7 @@ local function updatePowerLinesVisibility()
     upPwrPos()
 end
 
+-- ===== CIRCLE / RING SYSTEM =====
 local radQuality = 100
 local scrapRadius = 2.2
 local scrapRadOff = 1
@@ -276,6 +366,7 @@ local function getViewerPos()
     return Vector3.new(0, 0, 0)
 end
 
+-- ===== ADD OBJECT TO ESP =====
 local function addObj(v)
     if not v then return end
     local model = getModelFromInstance(v)
@@ -448,6 +539,7 @@ local function addObj(v)
     tList[#tList].circleData = { segs = segs, worldRadius = worldRadius, color = entry.Color or Color3.fromHex("#ffffff"), yOffset = yoff, isMsg = isMsg }
 end
 
+-- ===== UPDATE OBJECTS =====
 local function updObj()
     local f = workspace:FindFirstChild("Filter")
     if f then
@@ -476,6 +568,7 @@ local function updObj()
     end
 end
 
+-- ===== UPDATE ESP POSITIONS =====
 local function updPos()
     if not toggle.esp then
         for _, v in ipairs(tList) do
@@ -627,6 +720,7 @@ local function updPos()
     end
 end
 
+-- ===== HELPER FUNCTIONS =====
 local function getCharacterFromPart(p)
     while p do
         if p:FindFirstChild("Humanoid") then return p end
@@ -636,7 +730,7 @@ local function getCharacterFromPart(p)
 end
 
 local RakeModel, TargetVal = nil, nil
-spawn(function()
+task.spawn(function()
     while true do
         local r = workspace:FindFirstChild("Rake", true)
         if r ~= RakeModel then
@@ -650,6 +744,7 @@ spawn(function()
     end
 end)
 
+-- ===== SCRAP POINTS HOOK =====
 local playerChildConn, backpackChildConn = nil, nil
 local currentPoints, currentConn = nil, nil
 
@@ -714,6 +809,7 @@ local function deleteFallDamage()
 end
 deleteFallDamage()
 
+-- ===== RAKE BREAK HOOK =====
 local function tryHookRakeBreak()
     local map = workspace:FindFirstChild("Map")
     local safehouse = map and map:FindFirstChild("SafeHouse")
@@ -740,6 +836,7 @@ local function tryHookRakeBreak()
     end
 end
 
+-- ===== TELEPORT FUNCTIONS =====
 local function teleportToScrap()
     local char = lp and lp.Character
     if not char then return end
@@ -766,7 +863,8 @@ local function teleportToFlare()
     end
 end
 
-spawn(function()
+-- ===== BACKGROUND LOOPS =====
+task.spawn(function()
     while true do
         tryHookPoints()
         tryHookRakeBreak()
@@ -774,7 +872,7 @@ spawn(function()
     end
 end)
 
-spawn(function()
+task.spawn(function()
     local last = cam.ViewportSize
     while true do
         if cam.ViewportSize ~= last then
@@ -789,36 +887,24 @@ spawn(function()
     end
 end)
 
-spawn(function()
+task.spawn(function()
     while true do
         updatePowerLinesVisibility()
-        local count = 0
-        for i, entry in ipairs(modList) do
-            local p = Players:FindFirstChild(entry)
-            if p then
-                count = count + 1
-                modLines[i].Text = p.Name
-                modLines[i].Visible = toggle.hud
-            else
-                modLines[i].Visible = false
-            end
-        end
-        modLabel.Visible = toggle.hud and count > 0
-        upStaffPos()
         scrapText.Visible = toggle.hud
         scrapLabel.Visible = toggle.hud
         task.wait(0.5)
     end
 end)
 
-spawn(function()
+task.spawn(function()
     while true do
         updObj()
         task.wait(0.5)
     end
 end)
 
-spawn(function()
+-- ===== MAIN ESP LOOP =====
+task.spawn(function()
     while true do
         updPos()
         if iskeypressed(0x70) then
@@ -850,6 +936,7 @@ spawn(function()
                 toggle.hud = not toggle.hud
                 for _, o in ipairs(hudObjects) do if o then o.Visible = toggle.hud end end
                 updatePowerLinesVisibility()
+                CheckAllStaff()  -- Update staff visibility
             end
         else
             keyHeld.f2 = false
