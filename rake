@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local lp = Players.LocalPlayer
 local vs = "2.0 [05/17]"
 local Drawing = Drawing
@@ -31,8 +30,6 @@ end
 -- ===== REPLICATED STORAGE REFERENCES =====
 local TimerValue = ReplicatedStorage:WaitForChild("Timer")
 local pwrValue = ReplicatedStorage:WaitForChild("PowerValues")
-local PPMS = pwrValue:WaitForChild("PPMS")
-local StationPower = ReplicatedStorage:WaitForChild("StationPower")
 
 local pSM = {
     UsingSHDoor = "house_door_locked",
@@ -67,7 +64,7 @@ local rakeRoofModel, rakeRoofHealth, rakeRoofConn = nil, nil, nil
 
 local hudObjects = { timerText, scrapText, timerLabel, scrapLabel }
 
--- ===== POWER / STAFF POSITION =====
+-- ===== POWER POSITION =====
 local function upPwrPos()
     local _, _, r = anc()
     pwrLabel.Position = r - Vector2.new(50, 0)
@@ -80,7 +77,7 @@ local function upPwrPos()
     end
 end
 
--- ===== STAFF DETECTION (Sushi Gambit Style) =====
+-- ===== STAFF DETECTION (Group-Based) =====
 local GroupId = 2930838
 local MinRank = 10  -- Moderator and above
 
@@ -100,7 +97,6 @@ local function GetRankInGroup(UserId, GroupId)
 end
 
 local KnownStaff = {}
-local Connections = {}  -- For cleanup
 
 local function CheckStaff(player)
     task.spawn(function()
@@ -108,7 +104,7 @@ local function CheckStaff(player)
         if not userId then return end
         local rank, roleName = GetRankInGroup(userId, GroupId)
         if rank >= MinRank and not KnownStaff[userId] then
-            KnownStaff[userId] = true
+            KnownStaff[userId] = { Name = player.Name, Rank = rank, Role = roleName }
             notify(player.Name .. " (" .. roleName .. ") joined!", "STAFF ALERT", 8)
             print("[STAFF] " .. player.Name .. " | " .. roleName .. " (Rank " .. rank .. ")")
         end
@@ -120,14 +116,14 @@ pcall(function()
         for _, player in pairs(game.Players:GetPlayers()) do
             CheckStaff(player)
         end
-        table.insert(Connections, Players.PlayerAdded:Connect(CheckStaff))
+        Players.PlayerAdded:Connect(CheckStaff)
     end
 end)
 
 notify("Staff Detector", "Loaded | Group ID: " .. GroupId, 4)
 print("[STAFF] Staff detector loaded | Group: " .. GroupId .. " | Min Rank: " .. MinRank)
 
--- ===== STAFF POSITION (HUD) =====
+-- ===== STAFF HUD =====
 local modLH = 18
 local modLabel = T({ Center = false, Size = 13, Color = Color3.fromHex("#ff97f6"), Text = "staff_detected", Visible = false })
 local modLines = {}
@@ -146,7 +142,6 @@ local function upStaffPos()
 end
 
 local function CheckAllStaff()
-    -- Build staff list from KnownStaff
     local staffNames = {}
     for id, data in pairs(KnownStaff) do
         if Players:FindFirstChild(data.Name) then
@@ -154,7 +149,6 @@ local function CheckAllStaff()
         end
     end
     
-    -- Update modLines to match staff count
     for i = 1, #modLines do
         if modLines[i] then
             modLines[i].Visible = false
@@ -174,7 +168,6 @@ local function CheckAllStaff()
     upStaffPos()
 end
 
--- Update staff HUD periodically
 task.spawn(function()
     while true do
         task.wait(5)
@@ -260,7 +253,7 @@ local espObj = {
 local function fmt(s)
     s = math.max(0, math.floor(s))
     return ("%d:%02d"):format(math.floor(s / 60), s % 60)
-end
+}
 
 local function getModelFromInstance(i)
     if not i then return nil end
@@ -720,25 +713,12 @@ local function updPos()
     end
 end
 
--- ===== HELPER FUNCTIONS =====
-local function getCharacterFromPart(p)
-    while p do
-        if p:FindFirstChild("Humanoid") then return p end
-        p = p.Parent
-    end
-    return nil
-end
-
-local RakeModel, TargetVal = nil, nil
+local RakeModel = nil
 task.spawn(function()
     while true do
         local r = workspace:FindFirstChild("Rake", true)
         if r ~= RakeModel then
             RakeModel = r
-            TargetVal = r and r:FindFirstChild("TargetVal") or nil
-        elseif r then
-            local tv = r:FindFirstChild("TargetVal")
-            if tv ~= TargetVal then TargetVal = tv end
         end
         task.wait(0.5)
     end
@@ -936,7 +916,6 @@ task.spawn(function()
                 toggle.hud = not toggle.hud
                 for _, o in ipairs(hudObjects) do if o then o.Visible = toggle.hud end end
                 updatePowerLinesVisibility()
-                CheckAllStaff()  -- Update staff visibility
             end
         else
             keyHeld.f2 = false
@@ -955,5 +934,4 @@ task.spawn(function()
     end
 end)
 
-print(("saint | version %s"):format(vs))
 print("F1 = toggle esp | F2 = toggle hud | F3 = tp to scrap | F4 = tp to flare")
