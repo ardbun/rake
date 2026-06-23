@@ -253,7 +253,7 @@ local espObj = {
 local function fmt(s)
     s = math.max(0, math.floor(s))
     return ("%d:%02d"):format(math.floor(s / 60), s % 60)
-}
+end
 
 local function getModelFromInstance(i)
     if not i then return nil end
