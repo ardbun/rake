@@ -10,7 +10,7 @@ local task = task
 
 local toggle = { esp = true, hud = true }
 local keyHeld = { f1 = false, f2 = false, f3 = false, f4 = false }
-local FONT = Drawing.Fonts.UI
+local FONT = Drawing.Fonts.SystemBold
 
 -- ===== DRAWING HELPERS =====
 local function newText(props)
@@ -79,7 +79,7 @@ end
 
 -- ===== STAFF DETECTION (Group-Based) =====
 local GroupId = 2930838
-local MinRank = 10  -- Moderator and above
+local MinRank = 10
 
 local function GetRankInGroup(UserId, GroupId)
     if not UserId then return 0, "Unknown" end
@@ -282,7 +282,7 @@ local function updatePowerLinesVisibility()
 end
 
 -- ===== CIRCLE / RING SYSTEM =====
-local radQuality = 100
+local radQuality = 32
 local scrapRadius = 2.2
 local scrapRadOff = 1
 local boxRadius = 6
@@ -305,6 +305,19 @@ local MSG_ENTRIES = {
 }
 
 local fadeDistance = 40
+
+-- Precompute circle points
+local CirclePoints = {}
+for i = 1, radQuality do
+    local a = (i - 1) * (2 * math.pi / radQuality)
+    CirclePoints[i] = Vector3.new(math.cos(a), 0, math.sin(a))
+end
+
+local CircleOffsets = {}
+for i = 1, radQuality do
+    local p = CirclePoints[i]
+    CircleOffsets[i] = Vector3.new(p.X, 0, p.Z)
+end
 
 local function newLineSegment()
     local ok, l = pcall(function() return Drawing.new("Line") end)
@@ -347,7 +360,7 @@ end
 local function ensureCircleSegments(cd)
     if not cd then return end
     if cd.isMsg then return end
-    if cd.segs == nil then cd.segs = createFallbackRingSegments(100) end
+    if cd.segs == nil then cd.segs = createFallbackRingSegments(radQuality) end
 end
 
 local function getViewerPos()
@@ -521,7 +534,9 @@ local function addObj(v)
     tList[#tList + 1] = {
         object = object, model = modelRec or object.Parent,
         name = name, dist = dist, Address = recAddr, offY = off,
-        itemTexts = itemTexts, itemBG = itemBG, itemsFolder = itemsFolder
+        itemTexts = itemTexts, itemBG = itemBG, itemsFolder = itemsFolder,
+        lastMeters = nil,
+        itemCache = nil,
     }
     local worldRadius = 1.8
     if entryName and circleRadiusWorld[entryName] then worldRadius = circleRadiusWorld[entryName] end
@@ -601,7 +616,15 @@ local function updPos()
                 local meters = studs * studConv
                 local y = v.offY or 0
                 if v.name then v.name.Position = Vector2.new(s.X, s.Y - 12 + y); v.name.Visible = true end
-                if v.dist then v.dist.Position = Vector2.new(s.X, s.Y + 0.7 + y); v.dist.Text = tostring(math.floor(meters)) .. "m"; v.dist.Visible = true end
+                if v.dist then
+                    v.dist.Position = Vector2.new(s.X, s.Y + 0.7 + y)
+                    local metersInt = math.floor(meters)
+                    if v.lastMeters ~= metersInt then
+                        v.lastMeters = metersInt
+                        v.dist.Text = metersInt .. "m"
+                    end
+                    v.dist.Visible = true
+                end
                 if v.itemTexts and v.itemsFolder then
                     local children = v.itemsFolder:GetChildren()
                     local anyVisible = false
@@ -655,11 +678,12 @@ local function updPos()
                         for j = 1, segCount do if cd.segs[j] then cd.segs[j].Visible = false end end
                     else
                         local centerWorld = p - Vector3.new(0, cd.yOffset or 1.0, 0)
+                        local radius = cd.worldRadius
                         for j = 1, segCount do
-                            local a1 = (j - 1) * (2 * math.pi / segCount)
-                            local a2 = j * (2 * math.pi / segCount)
-                            local w1 = centerWorld + Vector3.new(math.cos(a1) * cd.worldRadius, 0, math.sin(a1) * cd.worldRadius)
-                            local w2 = centerWorld + Vector3.new(math.cos(a2) * cd.worldRadius, 0, math.sin(a2) * cd.worldRadius)
+                            local off1 = CircleOffsets[j]
+                            local off2 = CircleOffsets[(j % segCount) + 1]
+                            local w1 = centerWorld + Vector3.new(off1.X * radius, 0, off1.Z * radius)
+                            local w2 = centerWorld + Vector3.new(off2.X * radius, 0, off2.Z * radius)
                             local sp1, on1 = WorldToScreen(w1)
                             local sp2, on2 = WorldToScreen(w2)
                             local seg = cd.segs[j]
@@ -667,11 +691,8 @@ local function updPos()
                                 seg.From = sp1
                                 seg.To = sp2
                                 seg.Color = cd.color
-                                pcall(function() seg.Transparency = alpha end)
-                                local dx = sp2.X - sp1.X
-                                local dy = sp2.Y - sp1.Y
-                                local lens = math.max(1, math.floor((dx * dx + dy * dy)^0.5 / 18))
-                                seg.Thickness = math.clamp(lens, 2, 4)
+                                seg.Transparency = alpha
+                                seg.Thickness = 2
                                 seg.Visible = true
                             else
                                 if seg then seg.Visible = false end
@@ -797,8 +818,7 @@ local function tryHookRakeBreak()
     local breakModel = rakeBreak and rakeBreak:FindFirstChild("BreakModel", true)
     local health = breakModel and breakModel:FindFirstChild("Health", true)
     if breakModel and health and health:IsA("IntValue") then
-        if health ~= rakeRoofHealth then
-            if rakeRoofConn then pcall(function() rakeRoofConn:Disconnect() end); rakeRoofConn = nil end
+        if health ~= rakeRoofHealth then            if rakeRoofConn then pcall(function() rakeRoofConn:Disconnect() end); rakeRoofConn = nil end
             rakeRoofModel = breakModel
             rakeRoofHealth = health
             rakeRoofValue.Text = tostring(health.Value) .. "/30"
